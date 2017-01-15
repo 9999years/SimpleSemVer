@@ -6,7 +6,7 @@ struct SemVer<'p, 'm> {
     metadata:   Vec<&'m str>,
 }
 
-impl<'s> Vec<&'s str> {
+impl Vec<> {
     fn is_blank(&self, arr: Vec<&str>) -> bool {
         if arr.len() == 0 {
             //empty
