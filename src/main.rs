@@ -28,6 +28,16 @@ impl<'a> IsBlank for Vec<&'a str> {
     }
 }
 
+impl<'p, 'm> FromStr for SemVer<'p, 'm> {
+    type Err = ParseSemVerError;
+    fn from_str(&self) -> Result<SemVer, ParseSemVerError> {
+        for part in self.split(&['.', '+', '-',][..]) {
+            println!("{}", part);
+        }
+        SemVer::new()
+    }
+}
+
 impl<'p, 'm> SemVer<'p, 'm> {
 
     pub fn new() -> SemVer<'p, 'm> {
@@ -54,13 +64,6 @@ impl<'p, 'm> SemVer<'p, 'm> {
 
         output
     }
-
-    fn from_string(&self, input: &str) -> SemVer<'p, 'm> {
-        for part in input.split(&['.', '+', '-',][..]) {
-            println!("{}", part);
-        }
-        SemVer::new()
-    }
 }
 
 fn main() {
@@ -70,6 +73,6 @@ fn main() {
         metadata: vec!["comp128218218"],
         .. SemVer::new()
     };
-    ver.from_string(ver.into_string().as_str());
+    ver.into_string().as_str().parse();
     println!("{}", ver.into_string());
 }
