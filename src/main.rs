@@ -46,34 +46,58 @@ impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
             metadata,
         }
         let current_field = Field::major;
-        let ret: SemVer = Default::default();
-        let parse_chunk = |chunk: String| -> Result<String, Err> {
+        let mut ret: SemVer = Default::default();
+
+        let parse_chunk = |chunk: String| -> Result<(), ParseSemVerError> {
             println!("parsing {}", chunk);
-            let num: u32;
             match current_field {
                 Field::major | Field::minor | Field::patch
-                    => num = match chunk.parse() {
-                        Ok(val) => val,
-                        Err(err) => return err,
-                    },
+                    => {
+                        let num: u32 = match chunk.parse() {
+                            Ok(val) => val,
+                            Err(err) => return Err(
+                                ParseSemVerError { error: -1 }
+                            ),
+                        };
+                        match current_field {
+                            Field::major => {
+                                ret.major = num;
+                                let current_field = Field::minor;
+                            },
+                            Field::minor => {
+                                ret.minor = num;
+                                let current_field = Field::patch;
+                            },
+                            Field::patch => {
+                                ret.patch = num;
+                                let current_field = Field::prerelease;
+                            },
+                            _ => (),
+                        }
+                    }
+                Field::prerelease => { ret.prerelease.push(&chunk[..]) },
+                Field::metadata   => { ret.metadata.push(&chunk[..]) },
             }
-            match current_field {
-                Field::major => ret.major = num,
-                Field::minor => ret.minor = num,
-                Field::patch => ret.patch = num,
-                Field::prerelease => ret.prerelease.push(chunk),
-                Field::metadata => ret.metadata.push(chunk),
-                _ => panic!("Trying to set a field past the end of the struct!"),
-            }
-            current_field += 1;
-            "".to_string()
+            Ok(())
         };
+
         let mut current: String = "".to_string();
         for c in s.chars() {
             match c {
-                '.' => current = parse_chunk(current),
-                '-' => current = parse_chunk(current),
-                '+' => current = parse_chunk(current),
+                '.' | '-' | '+'
+                    => {
+                        current = "".to_string();
+                        match parse_chunk(current) {
+                            Ok(val) => (),
+                            Err(err) => return Err(err),
+                        }
+                        if c == '-' {
+                            current_field = Field::prerelease;
+                        } else if c == '+' {
+                            current_field = Field::metadata;
+                        }
+
+                    },
                 _   => current += &c.to_string(),
             }
         }
