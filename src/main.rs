@@ -1,3 +1,7 @@
+use std::fmt;
+use std::str;
+
+#[derive(Eq, PartialEq, Clone, Hash, Default, Debug)]
 pub struct SemVer<'p, 'm> {
     major: u32,
     minor: u32,
@@ -28,29 +32,30 @@ impl<'a> IsBlank for Vec<&'a str> {
     }
 }
 
-impl<'p, 'm> FromStr for SemVer<'p, 'm> {
+impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
     type Err = ParseSemVerError;
-    fn from_str(&self) -> Result<SemVer, ParseSemVerError> {
-        for part in self.split(&['.', '+', '-',][..]) {
-            println!("{}", part);
+    fn from_str(s: &str) -> Result<SemVer<'p, 'm>, ParseSemVerError> {
+        for c in s.chars() {
+            print!("{}", c);
         }
-        SemVer::new()
+        print!("\n");
+        Ok(Default::default())
     }
 }
 
-impl<'p, 'm> SemVer<'p, 'm> {
+pub struct ParseSemVerError {
+    error: i32
+}
 
-    pub fn new() -> SemVer<'p, 'm> {
-        SemVer {
-            major: 0,
-            minor: 0,
-            patch: 0,
-            prerelease: vec![],
-            metadata: vec![],
-        }
+impl fmt::Display for ParseSemVerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // i want an enum for different errors
+        unimplemented!();
     }
+}
 
-    pub fn into_string(&self) -> String {
+impl<'p, 'm> fmt::Display for SemVer<'p, 'm> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output: String = format!("{}.{}.{}",
             self.major, self.minor, self.patch);
 
@@ -62,8 +67,11 @@ impl<'p, 'm> SemVer<'p, 'm> {
             output += &("+".to_owned() + &self.metadata.join(".")[..]);
         }
 
-        output
+        write!(f, "{}", output)
     }
+}
+
+impl<'p, 'm> SemVer<'p, 'm> {
 }
 
 fn main() {
@@ -71,8 +79,8 @@ fn main() {
         minor: 100,
         prerelease: vec!["hahhghagh", "2016"],
         metadata: vec!["comp128218218"],
-        .. SemVer::new()
+        .. Default::default()
     };
-    ver.into_string().as_str().parse();
-    println!("{}", ver.into_string());
+    ver.to_string().as_str().parse::<SemVer>();
+    println!("{}", ver.to_string());
 }
