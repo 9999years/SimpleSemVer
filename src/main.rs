@@ -10,6 +10,9 @@ pub struct SemVer<'p, 'm> {
     metadata:   Vec<&'m str>,
 }
 
+// figures out if a type is "empty", having no contents
+// for example, a Vec["", "", ""] has elements, but they are all blank,
+// so it is blank
 trait IsBlank {
     fn is_blank(&self) -> bool;
 }
@@ -60,11 +63,11 @@ impl<'p, 'm> fmt::Display for SemVer<'p, 'm> {
             self.major, self.minor, self.patch);
 
         if !self.prerelease.is_blank() {
-            output += &("-".to_owned() + &self.prerelease.join(".")[..]);
+            output += &format!("-{}", self.prerelease.join("."))[..];
         }
 
         if !self.metadata.is_blank() {
-            output += &("+".to_owned() + &self.metadata.join(".")[..]);
+            output += &format!("+{}", self.metadata.join("."))[..];
         }
 
         write!(f, "{}", output)
@@ -72,13 +75,19 @@ impl<'p, 'm> fmt::Display for SemVer<'p, 'm> {
 }
 
 impl<'p, 'm> SemVer<'p, 'm> {
+    enum Field {
+        major,
+        minor,
+        patch,
+        prerelease,
+        metadata,
+    }
 }
 
 fn main() {
     let ver = SemVer {
         minor: 100,
         prerelease: vec!["hahhghagh", "2016"],
-        metadata: vec!["comp128218218"],
         .. Default::default()
     };
     ver.to_string().as_str().parse::<SemVer>();
