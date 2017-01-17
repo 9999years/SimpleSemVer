@@ -38,9 +38,46 @@ impl<'a> IsBlank for Vec<&'a str> {
 impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
     type Err = ParseSemVerError;
     fn from_str(s: &str) -> Result<SemVer<'p, 'm>, ParseSemVerError> {
-        for c in s.chars() {
-            print!("{}", c);
+        enum Field {
+            major,
+            minor,
+            patch,
+            prerelease,
+            metadata,
         }
+        let current_field = Field::major;
+        let ret: SemVer = Default::default();
+        let parse_chunk = |chunk: String| -> Result<String, Err> {
+            println!("parsing {}", chunk);
+            let num: u32;
+            match current_field {
+                Field::major | Field::minor | Field::patch
+                    => num = match chunk.parse() {
+                        Ok(val) => val,
+                        Err(err) => return err,
+                    },
+            }
+            match current_field {
+                Field::major => ret.major = num,
+                Field::minor => ret.minor = num,
+                Field::patch => ret.patch = num,
+                Field::prerelease => ret.prerelease.push(chunk),
+                Field::metadata => ret.metadata.push(chunk),
+                _ => panic!("Trying to set a field past the end of the struct!"),
+            }
+            current_field += 1;
+            "".to_string()
+        };
+        let mut current: String = "".to_string();
+        for c in s.chars() {
+            match c {
+                '.' => current = parse_chunk(current),
+                '-' => current = parse_chunk(current),
+                '+' => current = parse_chunk(current),
+                _   => current += &c.to_string(),
+            }
+        }
+        parse_chunk(current);
         print!("\n");
         Ok(Default::default())
     }
@@ -52,7 +89,9 @@ pub struct ParseSemVerError {
 
 impl fmt::Display for ParseSemVerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // i want an enum for different errors
+        enum Errors {
+            field_not_number
+        }
         unimplemented!();
     }
 }
@@ -75,13 +114,6 @@ impl<'p, 'm> fmt::Display for SemVer<'p, 'm> {
 }
 
 impl<'p, 'm> SemVer<'p, 'm> {
-    enum Field {
-        major,
-        minor,
-        patch,
-        prerelease,
-        metadata,
-    }
 }
 
 fn main() {
