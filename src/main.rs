@@ -45,15 +45,16 @@ impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
             prerelease,
             metadata,
         }
-        let current_field = Field::major;
-        let mut ret: SemVer = Default::default();
 
-        let parse_chunk = |chunk: String| -> Result<(), ParseSemVerError> {
-            println!("parsing {}", chunk);
+        let mut current_field = Field::major;
+        let mut ret: SemVer = Default::default();
+        let mut current: String = "".to_string();
+
+        let mut parse_chunk = |chunk: &String| -> Result<_, ParseSemVerError> {
             match current_field {
                 Field::major | Field::minor | Field::patch
                     => {
-                        let num: u32 = match chunk.parse() {
+                        let num: u32 = match (*chunk).parse() {
                             Ok(val) => val,
                             Err(err) => return Err(
                                 ParseSemVerError { error: -1 }
@@ -62,35 +63,35 @@ impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
                         match current_field {
                             Field::major => {
                                 ret.major = num;
-                                let current_field = Field::minor;
+                                current_field = Field::minor;
                             },
                             Field::minor => {
                                 ret.minor = num;
-                                let current_field = Field::patch;
+                                current_field = Field::patch;
                             },
                             Field::patch => {
                                 ret.patch = num;
-                                let current_field = Field::prerelease;
+                                current_field = Field::prerelease;
                             },
                             _ => (),
                         }
                     }
-                Field::prerelease => { ret.prerelease.push(&chunk[..]) },
-                Field::metadata   => { ret.metadata.push(&chunk[..]) },
-            }
+                Field::prerelease => { ret.prerelease.push(&(current.clone())[..]) },
+                //Field::metadata   => { ret.metadata.push(&current[..]) },
+                _ => (),
+            };
             Ok(())
         };
 
-        let mut current: String = "".to_string();
         for c in s.chars() {
             match c {
                 '.' | '-' | '+'
                     => {
-                        current = "".to_string();
-                        match parse_chunk(current) {
-                            Ok(val) => (),
+                        match parse_chunk(&current) {
+                            Ok(val) => val,
                             Err(err) => return Err(err),
                         }
+                        current = "".to_string();
                         if c == '-' {
                             current_field = Field::prerelease;
                         } else if c == '+' {
@@ -101,9 +102,9 @@ impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
                 _   => current += &c.to_string(),
             }
         }
-        parse_chunk(current);
+        parse_chunk(&current);
         print!("\n");
-        Ok(Default::default())
+        Ok(ret)
     }
 }
 
