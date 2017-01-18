@@ -1,5 +1,6 @@
 use std::fmt;
 use std::str;
+use std::num;
 
 #[derive(Eq, PartialEq, Clone, Hash, Default, Debug)]
 pub struct SemVer<'p, 'm> {
@@ -35,50 +36,65 @@ impl<'a> IsBlank for Vec<&'a str> {
     }
 }
 
+pub enum ParseSemVerError {
+    MandatoryFieldNotNumber(num::ParseIntError),
+}
+
+//impl fmt::Display for ParseSemVerError {
+    //fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        //match self {
+            //ParseSemVerError::MandatoryFieldNotNumber
+                //=> writeln!(f, "A mandatory field is not parseable as a uint32"),
+            ////_ => writeln!(f, "Other error, not specified!"),
+        //}
+    //}
+//}
+
+impl From<num::ParseIntError> for ParseSemVerError {
+    fn from(err: num::ParseIntError) -> ParseSemVerError {
+        ParseSemVerError::MandatoryFieldNotNumber(err)
+    }
+}
+
 impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
     type Err = ParseSemVerError;
     fn from_str(s: &str) -> Result<SemVer<'p, 'm>, ParseSemVerError> {
         enum Field {
-            major,
-            minor,
-            patch,
-            prerelease,
-            metadata,
+            Major,
+            Minor,
+            Patch,
+            Prerelease,
+            Metadata,
         }
 
         let mut ret: SemVer = Default::default();
         let mut current: String = "".to_string();
         {
-            let mut current_field = Field::major;
+            let mut current_field = Field::Major;
 
             let mut parse_chunk = |chunk: &String| -> Result<_, ParseSemVerError> {
                 match current_field {
-                    Field::major | Field::minor | Field::patch
+                    Field::Major | Field::Minor | Field::Patch
                         => {
-                            let num: u32 = match (*chunk).parse() {
-                                Ok(val) => val,
-                                Err(_) => return Err(
-                                    ParseSemVerError { error: -1 }
-                                ),
-                            };
+                            let num: u32 = try!((*chunk).parse());
                             match current_field {
-                                Field::major => {
+                                Field::Major => {
                                     ret.major = num;
-                                    let current_field = Field::minor;
+                                    current_field = Field::Minor;
                                 },
-                                Field::minor => {
+                                Field::Minor => {
                                     ret.minor = num;
-                                    let current_field = Field::patch;
+                                    current_field = Field::Patch;
                                 },
-                                Field::patch => {
+                                Field::Patch => {
                                     ret.patch = num;
-                                    let current_field = Field::prerelease;
+                                    current_field = Field::Prerelease;
                                 },
                                 _ => (),
                             }
                         }
-                    //Field::prerelease => { ret.prerelease.push(&(current.clone())[..]) },
-                    //Field::metadata   => { ret.metadata.push(&current[..]) },
+                    //Field::Prerelease => { ret.prerelease.push(&(current.clone())[..]) },
+                    //Field::Metadata   => { ret.metadata.push(&current[..]) },
                     _ => (),
                 };
                 Ok(())
@@ -88,37 +104,21 @@ impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
                 match c {
                     '.' | '-' | '+'
                         => {
-                            match parse_chunk(&current) {
-                                Ok(val) => val,
-                                Err(err) => return Err(err),
-                            }
-                            let current = "".to_string();
+                            try!(parse_chunk(&current));
+                            current = "".to_string();
                             if c == '-' {
-                                let current_field = Field::prerelease;
+                                let current_field = Field::Prerelease;
                             } else if c == '+' {
-                                let current_field = Field::metadata;
+                                let current_field = Field::Metadata;
                             }
 
                         },
                     _   => current += &c.to_string(),
                 }
             }
-            parse_chunk(&current);
+            try!(parse_chunk(&current));
         }
         Ok(ret)
-    }
-}
-
-pub struct ParseSemVerError {
-    error: i16
-}
-
-impl fmt::Display for ParseSemVerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        enum Errors {
-            field_not_number
-        }
-        unimplemented!();
     }
 }
 
@@ -143,11 +143,5 @@ impl<'p, 'm> SemVer<'p, 'm> {
 }
 
 fn main() {
-    let ver = SemVer {
-        minor: 100,
-        prerelease: vec!["hahhghagh", "2016"],
-        .. Default::default()
-    };
-    ver.to_string().as_str().parse::<SemVer>();
-    println!("{}", ver.to_string());
+    println!("{}", "1.0.0-5".parse::<SemVer>().unwrap_or(Default::default()).to_string());
 }
