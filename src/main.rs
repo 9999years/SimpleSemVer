@@ -46,70 +46,71 @@ impl<'p, 'm> str::FromStr for SemVer<'p, 'm> {
             metadata,
         }
 
-        let mut current_field = Field::major;
         let mut ret: SemVer = Default::default();
         let mut current: String = "".to_string();
+        {
+            let mut current_field = Field::major;
 
-        let mut parse_chunk = |chunk: &String| -> Result<_, ParseSemVerError> {
-            match current_field {
-                Field::major | Field::minor | Field::patch
-                    => {
-                        let num: u32 = match (*chunk).parse() {
-                            Ok(val) => val,
-                            Err(err) => return Err(
-                                ParseSemVerError { error: -1 }
-                            ),
-                        };
-                        match current_field {
-                            Field::major => {
-                                ret.major = num;
-                                current_field = Field::minor;
-                            },
-                            Field::minor => {
-                                ret.minor = num;
-                                current_field = Field::patch;
-                            },
-                            Field::patch => {
-                                ret.patch = num;
-                                current_field = Field::prerelease;
-                            },
-                            _ => (),
+            let mut parse_chunk = |chunk: &String| -> Result<_, ParseSemVerError> {
+                match current_field {
+                    Field::major | Field::minor | Field::patch
+                        => {
+                            let num: u32 = match (*chunk).parse() {
+                                Ok(val) => val,
+                                Err(_) => return Err(
+                                    ParseSemVerError { error: -1 }
+                                ),
+                            };
+                            match current_field {
+                                Field::major => {
+                                    ret.major = num;
+                                    let current_field = Field::minor;
+                                },
+                                Field::minor => {
+                                    ret.minor = num;
+                                    let current_field = Field::patch;
+                                },
+                                Field::patch => {
+                                    ret.patch = num;
+                                    let current_field = Field::prerelease;
+                                },
+                                _ => (),
+                            }
                         }
-                    }
-                Field::prerelease => { ret.prerelease.push(&(current.clone())[..]) },
-                //Field::metadata   => { ret.metadata.push(&current[..]) },
-                _ => (),
+                    //Field::prerelease => { ret.prerelease.push(&(current.clone())[..]) },
+                    //Field::metadata   => { ret.metadata.push(&current[..]) },
+                    _ => (),
+                };
+                Ok(())
             };
-            Ok(())
-        };
 
-        for c in s.chars() {
-            match c {
-                '.' | '-' | '+'
-                    => {
-                        match parse_chunk(&current) {
-                            Ok(val) => val,
-                            Err(err) => return Err(err),
-                        }
-                        current = "".to_string();
-                        if c == '-' {
-                            current_field = Field::prerelease;
-                        } else if c == '+' {
-                            current_field = Field::metadata;
-                        }
+            for c in s.chars() {
+                match c {
+                    '.' | '-' | '+'
+                        => {
+                            match parse_chunk(&current) {
+                                Ok(val) => val,
+                                Err(err) => return Err(err),
+                            }
+                            let current = "".to_string();
+                            if c == '-' {
+                                let current_field = Field::prerelease;
+                            } else if c == '+' {
+                                let current_field = Field::metadata;
+                            }
 
-                    },
-                _   => current += &c.to_string(),
+                        },
+                    _   => current += &c.to_string(),
+                }
             }
+            parse_chunk(&current);
         }
-        parse_chunk(&current);
-        print!("\n");
         Ok(ret)
     }
 }
 
 pub struct ParseSemVerError {
-    error: i32
+    error: i16
 }
 
 impl fmt::Display for ParseSemVerError {
